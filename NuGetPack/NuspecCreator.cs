@@ -12,7 +12,7 @@ namespace PubComp.Building.NuGetPack
     public partial class NuspecCreator
     {
         public void CreatePackages(
-            string binFolder, string solutionFolder, bool isDebug,
+            string binFolder, string solutionFolder, string buildConfiguration, string buildPlatform,
             bool doCreatePkg = true, bool doIncludeCurrentProj = false)
         {
             var projects = new LinkedList<string>();
@@ -22,9 +22,9 @@ namespace PubComp.Building.NuGetPack
             {
                 string assemblyName, assemblyPath;
                 GetAssemblyNameAndPath(
-                    projectPath, out assemblyName, isDebug, binFolder, out assemblyPath);
+                    projectPath, out assemblyName, buildConfiguration, buildPlatform, binFolder, out assemblyPath);
 
-                CreatePackage(projectPath, assemblyPath, isDebug, doCreatePkg, doIncludeCurrentProj);
+                CreatePackage(projectPath, assemblyPath, buildConfiguration, buildPlatform, doCreatePkg, doIncludeCurrentProj);
             }
         }
 
@@ -62,13 +62,13 @@ namespace PubComp.Building.NuGetPack
         }
 
         public void CreatePackage(
-            string projectPath, string assemblyPath, bool isDebug,
+            string projectPath, string assemblyPath, string buildConfiguration, string buildPlatform,
             bool doCreatePkg = true, bool doIncludeCurrentProj = false)
         {
             Console.WriteLine("Creating nuspec file");
 
             NuGetPackConfig config;
-            var doc = CreateNuspec(projectPath, assemblyPath, isDebug, doIncludeCurrentProj, out config);
+            var doc = CreateNuspec(projectPath, assemblyPath, buildConfiguration, buildPlatform, doIncludeCurrentProj, out config);
             var nuspecPath = Path.ChangeExtension(assemblyPath, ".nuspec");
 
             DebugOut(() => "nuspecPath = " + nuspecPath);
@@ -170,14 +170,14 @@ namespace PubComp.Building.NuGetPack
         }
 
         public XDocument CreateNuspec(
-            string projectPath, string assemblyPath, bool isDebug, bool doIncludeCurrentProj = false)
+            string projectPath, string assemblyPath, string buildConfiguration, string buildPlatform, bool doIncludeCurrentProj = false)
         {
             NuGetPackConfig config;
-            return CreateNuspec(projectPath, assemblyPath, isDebug, doIncludeCurrentProj, out config);
+            return CreateNuspec(projectPath, assemblyPath, buildConfiguration, buildPlatform, doIncludeCurrentProj, out config);
         }
 
         public XDocument CreateNuspec(
-            string projectPath, string assemblyPath, bool isDebug, bool doIncludeCurrentProj,
+            string projectPath, string assemblyPath, string buildConfiguration, string buildPlatform, bool doIncludeCurrentProj,
             out NuGetPackConfig config)
         {
             if (projectPath == null)
@@ -272,7 +272,7 @@ namespace PubComp.Building.NuGetPack
             var doc = CreateNuspec(
                 packageName, version, owners, authors, shortSummary,
                 longDescription, releaseNotes, licenseUrl, projectUrl, iconUrl, copyright, keywords, nuspecPath, projectPath,
-                isDebug, doAddFrameworkReferences, doIncludeSources,
+                buildConfiguration, buildPlatform, doAddFrameworkReferences, doIncludeSources,
                 doIncludeCurrentProj);
 
             return doc;
@@ -314,7 +314,7 @@ namespace PubComp.Building.NuGetPack
             string keywords,
             string nuspecPath,
             string projectPath,
-            bool isDebug,
+     string buildConfiguration, string buildPlatform,
             bool doAddFrameworkReferences,
             bool doIncludeSources,
             bool doIncludeCurrentProj)
@@ -324,7 +324,7 @@ namespace PubComp.Building.NuGetPack
             XAttribute dependenciesAttribute;
 
             var elements = GetElements(
-                nuspecFolder, projectPath, isDebug, doIncludeSources, doIncludeCurrentProj,
+                nuspecFolder, projectPath, buildConfiguration, buildPlatform, doIncludeSources, doIncludeCurrentProj,
                 out dependenciesAttribute);
 
             var dependencies = new XElement("group");
@@ -385,7 +385,7 @@ namespace PubComp.Building.NuGetPack
         public List<DependencyInfo> GetDependencies(
             string projectPath, string[] packagesFiles, out XAttribute dependenciesAttribute)
         {
-            var targetFramework =  "net" + (GetFrameworkVersion(projectPath) ?? "45");
+            var targetFramework = "net" + (GetFrameworkVersion(projectPath) ?? "45");
 
             dependenciesAttribute = new XAttribute("targetFramework", targetFramework);
 
@@ -422,7 +422,7 @@ namespace PubComp.Building.NuGetPack
         }
 
         public List<DependencyInfo> GetInternalDependencies(
-            string projectPath, bool isDebug, string buildMachineBinFolder)
+            string projectPath, string buildConfiguration, string buildPlatform, string buildMachineBinFolder)
         {
             var references = GetReferences(projectPath, true);
             var projectFolder = Path.GetDirectoryName(projectPath);
@@ -435,7 +435,7 @@ namespace PubComp.Building.NuGetPack
                 var refProjPath = Path.Combine(projectFolder, reference);
 
                 string assemblyName, assemblyPath;
-                GetAssemblyNameAndPath(refProjPath, out assemblyName, isDebug, buildMachineBinFolder, out assemblyPath);
+                GetAssemblyNameAndPath(refProjPath, out assemblyName, buildConfiguration, buildPlatform, buildMachineBinFolder, out assemblyPath);
 
                 DebugOut(() => "assemblyPath = " + assemblyPath);
 
@@ -489,7 +489,7 @@ namespace PubComp.Building.NuGetPack
         /// <param name="dependenciesAttribute"></param>
         /// <returns>Elements for NuSpec</returns>
         public List<DependencyInfo> GetElements(
-            string nuspecFolder, string projectPath, bool isDebug, bool doIncludeSources,
+            string nuspecFolder, string projectPath, string buildConfiguration, string buildPlatform, bool doIncludeSources,
             bool doIncludeCurrentProj,
             out XAttribute dependenciesAttribute)
         {
@@ -499,7 +499,7 @@ namespace PubComp.Building.NuGetPack
             if (projectPath == null)
                 throw new ArgumentNullException(nameof(projectPath));
 
-            DebugOut(() => $"\r\n\r\nGetFiles({nuspecFolder}, {projectPath}, {isDebug})\r\n");
+            DebugOut(() => $"\r\n\r\nGetFiles({nuspecFolder}, {projectPath}, {buildConfiguration}, {buildPlatform})\r\n");
 
             var projectFolder = Path.GetDirectoryName(projectPath);
 
@@ -528,9 +528,9 @@ namespace PubComp.Building.NuGetPack
 
             if (doIncludeCurrentProj)
             {
-                result.AddRange(GetInternalDependencies(projectPath, isDebug, nuspecFolder));
+                result.AddRange(GetInternalDependencies(projectPath, buildConfiguration, buildPlatform, nuspecFolder));
 
-                result.AddRange(GetBinaryReferences(nuspecFolder, projectFolder, projectPath, isDebug, nuspecFolder));
+                result.AddRange(GetBinaryReferences(nuspecFolder, projectFolder, projectPath, buildConfiguration, buildPlatform, nuspecFolder));
 
                 if (doIncludeSources)
                     result.AddRange(GetSourceFiles(nuspecFolder, projectFolder, projectPath));
@@ -560,11 +560,11 @@ namespace PubComp.Building.NuGetPack
                 DebugOut(() => "projFolder = " + refProjFolder);
                 DebugOut(() => "projPath = " + refProjPath);
 
-                result.AddRange(GetBinaryReferences(nuspecFolder, refProjFolder, refProjPath, isDebug, nuspecFolder));
-                
+                result.AddRange(GetBinaryReferences(nuspecFolder, refProjFolder, refProjPath, buildConfiguration, buildPlatform, nuspecFolder));
+
                 if (doIncludeSources)
                     result.AddRange(GetSourceFiles(nuspecFolder, refProjFolder, refProjPath));
-                
+
                 result.AddRange(GetDependenciesFromProject(refProjFolder, refProjPath));
             }
 
@@ -745,19 +745,20 @@ namespace PubComp.Building.NuGetPack
             }
 
             return results;
-        }  
+        }
 
         #endregion
 
         #region Referenced Projects Parsing
 
-        private string GetOutputPath(XDocument csProj, bool isDebug, string projectFolder)
+        private string GetOutputPath(XDocument csProj, string buildConfiguration, string buildPlatform, string projectFolder)
         {
             var xmlns = csProj.Root.GetDefaultNamespace();
             var proj = csProj.Element(xmlns + "Project");
             var propGroups = proj.Elements(xmlns + "PropertyGroup");
 
-            var config = (isDebug ? "Debug|AnyCPU" : "Release|AnyCPU");
+            //var config = (isDebug ? "Debug|AnyCPU" : "Release|AnyCPU");
+            var config = $"{buildConfiguration}|{buildPlatform}";
 
             var outputPathElement = propGroups
                 .Where(el => el.Attribute("Condition") != null
@@ -769,10 +770,10 @@ namespace PubComp.Building.NuGetPack
         }
 
         public List<DependencyInfo> GetBinaryReferences(
-            string nuspecFolder, string projectFolder, string projectPath, bool isDebug, string buildMachineBinFolder)
+            string nuspecFolder, string projectFolder, string projectPath, string buildConfiguration, string buildPlatform, string buildMachineBinFolder)
         {
             DebugOut(() =>
-                $"\r\n\r\nGetBinaryReferences({projectFolder}, {projectPath}, {isDebug}, {buildMachineBinFolder})\r\n");
+                $"\r\n\r\nGetBinaryReferences({projectFolder}, {projectPath}, {buildConfiguration}, {buildPlatform}, {buildMachineBinFolder})\r\n");
 
             var versionFolder = "net" + (GetFrameworkVersion(projectPath) ?? "45");
 
@@ -785,11 +786,11 @@ namespace PubComp.Building.NuGetPack
 
             var propGroups = proj.Elements(xmlns + "PropertyGroup");
 
-            outputPath = GetOutputPath(csProj, isDebug, projectFolder);
+            outputPath = GetOutputPath(csProj, buildConfiguration, buildPlatform, projectFolder);
 
             if (!Directory.Exists(outputPath)
                 || !Directory.GetFiles(outputPath).Any(f =>
-                    f.ToLower().EndsWith(".dll") ||f.ToLower().EndsWith(".exe"))
+                    f.ToLower().EndsWith(".dll") || f.ToLower().EndsWith(".exe"))
                 )
             {
                 outputPath = buildMachineBinFolder;
@@ -824,7 +825,7 @@ namespace PubComp.Building.NuGetPack
         }
 
         private void GetAssemblyNameAndPath(
-            string projectPath, out string assemblyName, bool isDebug, string buildMachineBinFolder, out string assemblyPath)
+            string projectPath, out string assemblyName, string buildConfiguration, string buildPlatform, string buildMachineBinFolder, out string assemblyPath)
         {
             DebugOut(() => $"\r\n\r\nGetAssemblyName({projectPath})\r\n");
 
@@ -844,7 +845,7 @@ namespace PubComp.Building.NuGetPack
 
             var projectFolder = Path.GetDirectoryName(projectPath);
 
-            var outputPath = GetOutputPath(csProj, isDebug, projectFolder);
+            var outputPath = GetOutputPath(csProj, buildConfiguration, buildPlatform, projectFolder);
 
             if (!Directory.Exists(outputPath)
                 || !Directory.GetFiles(outputPath).Any(f =>

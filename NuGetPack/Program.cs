@@ -11,13 +11,13 @@ namespace PubComp.Building.NuGetPack
         public static void Main(string[] args)
         {
             Mode mode;
-            string projPath, dllPath, binFolder, solutionFolder;
+            string projPath, dllPath, binFolder, solutionFolder, buildConfiguration, buildPlatform;
             bool isDebug, doCreatePkg, doIncludeCurrentProj;
 
 
             if (!TryParseArguments(
                 args, out mode, out projPath, out dllPath, out binFolder, out solutionFolder,
-                out isDebug, out doCreatePkg, out doIncludeCurrentProj))
+                out buildConfiguration, out buildPlatform, out doCreatePkg, out doIncludeCurrentProj))
             {
                 WriteError();
                 return;
@@ -27,11 +27,11 @@ namespace PubComp.Building.NuGetPack
 
             if (mode != Mode.Solution)
             {
-                creator.CreatePackage(projPath, dllPath, isDebug, doCreatePkg, doIncludeCurrentProj);
+                creator.CreatePackage(projPath, dllPath, buildConfiguration, buildPlatform, doCreatePkg, doIncludeCurrentProj);
             }
             else
             {
-                creator.CreatePackages(binFolder, solutionFolder, isDebug, doCreatePkg, doIncludeCurrentProj);
+                creator.CreatePackages(binFolder, solutionFolder, buildConfiguration, buildPlatform, doCreatePkg, doIncludeCurrentProj);
             }
         }
 
@@ -41,13 +41,14 @@ namespace PubComp.Building.NuGetPack
             string[] args,
             out Mode mode,
             out string projPath, out string dllPath, out string binFolder, out string solutionFolder,
-            out bool isDebug, out bool doCreateNuPkg, out bool doIncludeCurrentProj)
+            out string buildConfiguration, out string buildPlatform, out bool doCreateNuPkg, out bool doIncludeCurrentProj)
         {
             mode = Mode.Project;
             Mode? modeVar = null;
             projPath = null;
             dllPath = null;
-            isDebug = false;
+            buildConfiguration = "Release";
+            buildPlatform = "AnyCPU";
             doCreateNuPkg = true;
             doIncludeCurrentProj = false;
             binFolder = null;
@@ -120,10 +121,19 @@ namespace PubComp.Building.NuGetPack
 
                     doIncludeCurrentProj = true;
                 }
+                else if (arg.ToLower().StartsWith("platform="))
+                {
+                    buildPlatform = arg.Substring(9).Replace(" ", "");
+                }
+                else if (arg.ToLower().StartsWith("configuration="))
+                {
+                    buildConfiguration = arg.Substring(14);
+                }
                 else
                 {
                     return false;
                 }
+
             }
 
             if (modeVar != Mode.Solution)
@@ -144,20 +154,20 @@ namespace PubComp.Building.NuGetPack
             }
 
             mode = modeVar ?? Mode.Project;
-            isDebug = (config ?? string.Empty).ToLower() == "debug";
 
             return true;
         }
 
         private static void WriteError()
         {
-            Console.WriteLine(@"Correct usage: NuGetPack.exe [project] <pathToCsProj> <pathToDll> [<Debug|Release>] [nopkg]");
-            Console.WriteLine(@"Via post build event: NuGetPack.exe [project] ""$(ProjectPath)"" ""$(TargetPath)"" $(ConfigurationName)");
-            Console.WriteLine(@"or: NuGetPack.exe [project] ""$(ProjectPath)"" ""$(TargetPath)"" $(ConfigurationName) nopkg");
+            Console.WriteLine(@"Correct usage: NuGetPack.exe [project] <pathToCsProj> <pathToDll> [Configuration=<Debug|Release|etc>] [Platform=<AnyCpu|x86|x64|etc>] [nopkg]");
+            Console.WriteLine(@"Via post build event: NuGetPack.exe [project] ""$(ProjectPath)"" ""$(TargetPath)"" Configuration=$(ConfigurationName) Platform=$(PlatformName)");
+            Console.WriteLine(@"or: NuGetPack.exe [project] ""$(ProjectPath)"" ""$(TargetPath)"" Configuration=$(ConfigurationName) Platform=$(PlatformName) nopkg");
+            Console.WriteLine(@"If not specified, Configuration defaults to Release and Platform defaults to AnyCPU");
             Console.WriteLine();
             Console.WriteLine(@"or for solution level:");
             Console.WriteLine();
-            Console.WriteLine(@"Correct usage: NuGetPack.exe solution bin=<binFolder> src=<solutionFolder> [<Debug|Release>] [nopkg]");
+            Console.WriteLine(@"Correct usage: NuGetPack.exe solution bin=<binFolder> src=<solutionFolder> [Configuration=<Debug|Release|etc>] [Platform=<AnyCpu|x86|x64|etc>]  [nopkg]");
         }
     }
 }
