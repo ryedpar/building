@@ -48,7 +48,12 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(ProjectDir)sln\NuGetPack.exe "$(ProjectPath)" "$(TargetPath)" $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>$(ProjectDir)sln\NuGetPack.exe "$(ProjectPath)" "$(TargetPath)" Configuration=$(ConfigurationName) Platform=$(PlatformName)</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>copy "$(SolutionDir)NuGetPack\$(OutDir)\NuGetPack.exe" "$(ProjectDir)sln"
+copy "$(SolutionDir)NuGetPack\$(OutDir)\NuGet.exe" "$(ProjectDir)sln"
+</PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

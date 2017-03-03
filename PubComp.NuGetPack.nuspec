@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>PubComp.NuGetPack</id>
+    <version>2.13.1</version>
+    <title>PubComp.NuGetPack</title>
+    <authors>Danny Varod</authors>
+    <owners>Danny Varod</owners>
+    <licenseUrl>https://pubcomp.codeplex.com/license</licenseUrl>
+    <projectUrl>https://pubcomp.codeplex.com/</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Create NuGet packages during your build. Adds NuGetPack.exe to your solution</description>
+    <summary>Create NuGet packages during your build. Adds NuGetPack.exe to your solution</summary>
+    <language>en-US</language>
+    <tags>NuGet NuGetPack NuGetPack.exe Package Packages Build PubComp</tags>
+    <dependencies>
+      <group targetFramework=".NETFramework4.5" />
+    </dependencies>
+  </metadata>
+</package>
